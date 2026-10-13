@@ -10,3 +10,11 @@ film/frames_all/
 film/assets/song/
 film/out/*swim*
 film/out/audio_swim*
+piggy/probe/
+piggy/frames_*/
+piggy/frames_all/
+piggy/frames_list.txt
+piggy/out/*.wav
+piggy/out/*.log
+piggy/out/video.mp4
+piggy/assets/song.wav
