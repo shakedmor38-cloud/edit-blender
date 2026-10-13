@@ -37,10 +37,10 @@ function drawCake(id, x, y, s, o = {}) {
     if (o.plate !== false) pEll(`${id}.plate`, 0, 4, 128, 14, '#dcd6cd', { amp: .8 });
     // bottom tier
     pRect(`${id}.t1`, -110, -92, 220, 94, 12, '#ec9aa3', { amp: 1.2 });
-    pPoly(`${id}.d1`, [[-112, -94], [112, -94], [112, -70], [96, -60], [84, -72], [66, -54], [48, -70], [30, -58], [12, -72], [-6, -56], [-24, -70], [-44, -58], [-62, -72], [-80, -56], [-98, -70], [-112, -62]], '#fbf2e4', { smooth: 1, amp: .8, rim: 0 });
+    pPoly(`${id}.d1`, [[-112, -94], [112, -94], [112, -76], [96, -66], [84, -78], [66, -62], [48, -76], [30, -64], [12, -78], [-6, -63], [-24, -76], [-44, -64], [-62, -78], [-80, -63], [-98, -76], [-112, -68]], '#fbf2e4', { smooth: 1, amp: .8, rim: 0 });
     ctx.fillStyle = '#fff4e6'; for (let i = 0; i < 16; i++) { ctx.beginPath(); ctx.arc(-103 + i * 13.7, -5, 4.6, 0, TAU); ctx.fill(); }
     ctx.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 16; i++) { ctx.beginPath(); ctx.arc(-104.5 + i * 13.7, -6.5, 1.6, 0, TAU); ctx.fill(); }
-    iced('still with you', 0, -36, 25);
+    iced('still with you', 0, -34, 30);
     // top tier
     pRect(`${id}.t2`, -74, -160, 148, 72, 10, '#fbf2e4', { amp: 1.2 });
     pPoly(`${id}.d2`, [[-76, -162], [76, -162], [76, -142], [60, -132], [46, -146], [28, -128], [10, -144], [-8, -130], [-28, -146], [-46, -130], [-62, -144], [-76, -136]], '#f2a3b0', { smooth: 1, amp: .8, rim: 0 });
@@ -75,9 +75,11 @@ function drawCake(id, x, y, s, o = {}) {
 function iced(str, x, y, size) {
   ctx.save();
   ctx.font = `${size}px Pacifico`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.letterSpacing = (size * .03) + 'px';
   ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-  ctx.fillStyle = ctx.strokeStyle = 'rgba(160,70,72,.30)'; ctx.lineWidth = size * .2;
-  ctx.strokeText(str, x + size * .04, y + size * .09); ctx.fillText(str, x + size * .04, y + size * .09);
+  ctx.fillStyle = ctx.strokeStyle = 'rgba(150,48,62,.55)'; ctx.lineWidth = size * .24;
+  ctx.strokeText(str, x + size * .03, y + size * .08); ctx.fillText(str, x + size * .03, y + size * .08);
+  ctx.strokeStyle = 'rgba(150,48,62,.35)'; ctx.lineWidth = size * .26; ctx.strokeText(str, x, y);
   ctx.fillStyle = ctx.strokeStyle = '#fff4e6'; ctx.lineWidth = size * .17;
   ctx.strokeText(str, x, y); ctx.fillText(str, x, y);
   ctx.strokeStyle = 'rgba(230,200,180,.55)'; ctx.lineWidth = size * .035; ctx.strokeText(str, x, y + size * .02);
