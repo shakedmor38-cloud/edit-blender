@@ -50,7 +50,7 @@ figure{{margin:0;background:#fffaf5;padding:8px 8px 12px;box-shadow:0 3px 10px r
 img{{width:100%;display:block}}
 figcaption{{display:flex;flex-direction:column;gap:2px;padding:8px 4px 0;font-size:17px;line-height:1.3}}
 .tc{{font-size:14px;color:#c4563d;font-variant-numeric:tabular-nums}} b{{font-weight:600}}
-</style></head><body><div class=wrap><h1>Make a wish, May! · storyboard</h1>
+</style></head><body><div class=wrap><h1>Happy Birthday, May · storyboard</h1>
 <p class=sub>1080 x 1080 · 22.5 s · paper-cut collage style · frames rendered from the actual animation code</p>
 <div class=grid>{figs}</div></div></body></html>"""
         (HERE / "storyboard.html").write_text(html)

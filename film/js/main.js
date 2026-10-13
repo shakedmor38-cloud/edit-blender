@@ -66,7 +66,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyR') { cur = 0; playing = true; t0 = performance.now(); tStart = 0; requestAnimationFrame(loop); }
 });
 
-document.fonts.load('600 40px Fredoka').then(() => document.fonts.load('40px "Patrick Hand"')).then(() => document.fonts.ready).then(() => {
+document.fonts.load('600 40px Fredoka').then(() => document.fonts.load('40px "Patrick Hand"')).then(() => document.fonts.load('40px Pacifico')).then(() => document.fonts.ready).then(() => {
   window.seek(cur);
   window.ready = true;
 });

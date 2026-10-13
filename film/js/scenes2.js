@@ -358,10 +358,10 @@ function sceneEnd(t) {
   ctx.save(); ctx.globalCompositeOperation = 'screen';
   const cg = ctx.createRadialGradient(540, 560, 10, 540, 560, 360); cg.addColorStop(0, `rgba(255,214,140,${.35 * Math.max(lit2, lit7)})`); cg.addColorStop(1, 'rgba(255,214,140,0)');
   ctx.fillStyle = cg; ctx.fillRect(0, 0, 1080, 1080); ctx.restore();
-  drawCake('cake5', 540, 1040, 2.15, { t, lit: [lit2, lit7], plate: true, flameS: .9 });
+  drawCake('cake5', 540, 1022, 2.15, { t, lit: [lit2, lit7], plate: true, flameS: .9 });
   // magic sparkles travelling to the wicks
   for (let k = 0; k < 14; k++) {
-    const target = k % 2 ? [540 + 34 * 2.15, 1040 - 2.15 * 242] : [540 - 34 * 2.15, 1040 - 2.15 * 242];
+    const target = k % 2 ? [540 + 34 * 2.15, 1022 - 2.15 * 242] : [540 - 34 * 2.15, 1022 - 2.15 * 242];
     const t0 = 20.12 + (k % 7) * .05 + (k % 2) * .2, u = prog(t, t0, t0 + .42);
     if (u <= 0 || u >= 1) continue;
     const a0 = k * 2.3, R = 260 * (1 - E.io(u));
@@ -371,6 +371,6 @@ function sceneEnd(t) {
   // bubble
   if (t > 20.9) {
     const a = pop(t, 20.9, 2.6, .5);
-    bubble('b5', 600, 250, ['Make a wish, May!'], 58, { a, dx: -20, dy: 60, rot: -.02 + .015 * Math.sin(t * 2.4) });
+    bubble('b5', 600, 250, ['Happy Birthday!'], 62, { a, dx: -20, dy: 60, rot: -.02 + .015 * Math.sin(t * 2.4) });
   }
 }

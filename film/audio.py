@@ -20,6 +20,9 @@ N = int(T * SR)
 rng = np.random.default_rng(27)
 DRY = np.zeros((N, 2))
 VERB = np.zeros((N, 2))
+SC = np.zeros((N, 2))      # synths that duck under the kick (K-pop pump)
+SCV = np.zeros((N, 2))
+KICKS = []
 
 
 def hz(m): return 440.0 * 2 ** ((m - 69) / 12)
@@ -31,8 +34,9 @@ def m(name):
 def tt(d): return np.arange(int(round(d * SR))) / SR
 
 
-def place(sig, t0, gain=1.0, pan=0.0, rev=0.15):
+def place(sig, t0, gain=1.0, pan=0.0, rev=0.15, bus=None):
     """add mono or stereo signal at time t0 (s) with constant-power pan (-1..1) and a reverb send"""
+    dry, verb = (SC, SCV) if bus == 'sc' else (DRY, VERB)
     sig = np.asarray(sig, dtype=float)
     if sig.ndim == 1:
         a = (pan + 1) * np.pi / 4
@@ -41,8 +45,8 @@ def place(sig, t0, gain=1.0, pan=0.0, rev=0.15):
     if i0 < 0: sig, i0 = sig[-i0:], 0
     n = min(len(sig), N - i0)
     if n <= 0: return
-    DRY[i0:i0 + n] += sig[:n] * gain
-    VERB[i0:i0 + n] += sig[:n] * gain * rev
+    dry[i0:i0 + n] += sig[:n] * gain
+    verb[i0:i0 + n] += sig[:n] * gain * rev
 
 
 def lp(x, fc, order=2): return sg.sosfilt(sg.butter(order, fc, 'low', fs=SR, output='sos'), x)
@@ -86,7 +90,7 @@ def glock(mid, vel=0.5, L=1.6):
     for r, a, d in [(1, 1, 2.6), (2.76, .35, 7), (5.40, .18, 11), (8.93, .08, 16)]:
         if r * f < 18000: y += a * np.sin(2 * np.pi * r * f * t) * np.exp(-d * t)
     y *= np.minimum(1, t / 0.0015)
-    return y * vel * 0.3
+    return y * vel * 0.17
 
 
 def celesta(mid, vel=0.5, L=2.0):
@@ -279,6 +283,50 @@ def roll(t0, t1, vel0=0.2, vel1=0.9, rate=24, pan=0):
         t += 1 / rate; k += 1
 
 
+# ---- K-pop synths ----
+def supersaw(notes, dur, vel=0.6, att=0.008, rel=0.22, cutoff=7000, voices=7, spread=24):
+    L = dur + rel; t = tt(L); out = np.zeros((len(t), 2))
+    for n in notes:
+        f = hz(m(n) if isinstance(n, str) else n)
+        for v in range(voices):
+            u = v / (voices - 1) * 2 - 1
+            ff = f * 2 ** (u * spread / 1200)
+            y = saw_phase(2 * np.pi * ff * t + rng.uniform(0, 6.28), ff)
+            a = (u * .8 + 1) * np.pi / 4
+            out[:, 0] += y * np.cos(a); out[:, 1] += y * np.sin(a)
+    out = lp(hp(out.T, 140), cutoff, 2).T
+    e = np.minimum(1, t / att) * np.where(t < dur, 0.85 + 0.15 * np.exp(-t * 8), 0.85 * np.exp(-(t - dur) / (rel / 3)))
+    return out * e[:, None] * vel * 0.022
+def spluck(mid, vel=0.5, L=0.32):
+    f = hz(mid); t = tt(L); y = np.zeros_like(t)
+    for k in range(1, 24):
+        if k * f > 16000: break
+        y += (1 / k) * (1 if k % 2 else .55) * np.sin(2 * np.pi * k * f * t + .3 * k) * np.exp(-t * (6 + k * 2.4))
+    return y * np.minimum(1, t / 0.0015) * vel * 0.32
+def b808(mid, dur, vel=0.8):
+    t = tt(dur + 0.08); f = hz(mid) * (1 + .18 * np.exp(-t * 30))
+    y = np.sin(2 * np.pi * np.cumsum(f) / SR)
+    e = np.minimum(1, t / 0.003) * np.exp(-t * 1.1) * np.where(t < dur, 1, np.exp(-(t - dur) / 0.025))
+    return np.tanh(2.6 * y * e) * vel * 0.42
+def kick_pop(vel=1.0):
+    k = kick(vel); KICK_CLICK = hp(noise(0.01), 3000) * np.exp(-tt(0.01) / 0.002) * .25 * vel
+    k[:len(KICK_CLICK)] += KICK_CLICK
+    return k
+def K(t0, vel=1.0, pan=0):
+    place(kick_pop(vel), t0, 1, pan, .03); KICKS.append((t0, vel))
+def impact(vel=1.0):
+    t = tt(1.4); f = 30 + 45 * np.exp(-t * 4)
+    y = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t * 2.2) + lp(noise(1.4), 1500) * np.exp(-t * 9) * .5
+    return np.tanh(y * 1.3) * vel * 0.5
+def hats(t0, t1, rate, vel=0.32, pan=.25):
+    t = t0
+    while t < t1 - 1e-6:
+        place(hat(vel, 0.035), t, 1, pan, .03); t += 1 / rate
+def riser(d, vel=0.5, f0=300, f1=5000):
+    w = whoosh(d, f0, f1, vel) * np.linspace(0.2, 1, int(round(d * SR)))
+    r = tt(d); w += np.sin(2 * np.pi * np.cumsum(f0 * .5 * (f1 / f0) ** (r / d * .6)) / SR) * (r / d) ** 2 * .04 * vel
+    return w
+
 # ---- sfx ----
 def whoosh(d=0.4, f0=400, f1=2500, vel=0.5):
     x = noise(d); out = np.zeros_like(x); B = 512; zi = np.zeros((2, 2))
@@ -381,32 +429,29 @@ chord(['Bb3', 'D4', 'F4', 'Bb4'], 3.05, 0.3, vel=0.4)
 roll(2.95, 3.38, 0.1, 0.7)
 place(whoosh(0.3, 500, 4000, 0.5), 3.12, 1, -.2, .15)
 
-# ---------- Scene 2: the panic (A minor, 150 BPM: beat .4, eighth .2) ----------
-place(timpani(m('A1'), 1.0), 3.4, 1, 0, .3)
-place(piano(m('A1'), 0.6, 0.8), 3.4, 1, -.2, .2)
-place(piano(m('A2'), 0.6, 0.6), 3.4, 1, -.1, .2)
+# ---------- Scene 2: the panic (A minor, 150 BPM trap-pop: beat .4, 16th .1) ----------
+place(impact(0.9), 3.4, 1, 0, .2)
+place(timpani(m('A1'), 0.8), 3.4, 1, 0, .3)
 place(crash(0.5), 3.4, 1, -.2, .3)
 place(woodblock(2200, .9), 3.5, 1, .3, .15)
 alarm(3.62, 0.42, 0.9)
 place(woodblock(1600, .7), 3.8, 1, -.3, .15)
-G0 = 3.95; E8 = 0.2
-prog = [('A', ['A3', 'C4', 'E4'], ['A2', 'A2', 'E3', 'A2']), ('F', ['F3', 'A3', 'C4'], ['F2', 'F2', 'C3', 'F2']),
-        ('G', ['G3', 'B3', 'D4'], ['G2', 'G2', 'D3', 'G2']), ('E', ['E3', 'G#3', 'B3', 'D4'], ['E2', 'E2', 'B2', 'G#2'])]
+place(riser(0.3, .35, 600, 4000), 3.65, 1, 0, .1)
+G0 = 3.95; S16 = 0.1
+prog = [(['A3', 'C4', 'E4'], 'A1'), (['F3', 'A3', 'C4'], 'F1'), (['G3', 'B3', 'D4'], 'G1'), (['E3', 'G#3', 'B3', 'D4'], 'E1')]
 mel = [['E5', 'D5', 'C5', 'B4'], ['A4', 'C5', 'F5', 'E5'], ['D5', 'B4', 'G4', 'B4'], ['G#4', 'B4', 'E5', 'D5']]
-for c, (name, ch, bl) in enumerate(prog):
+for c, (ch, root) in enumerate(prog):
+    u0 = G0 + c * 0.8
+    K(u0, .95); K(u0 + .5, .6)
+    place(clap(.75), u0 + .4, 1, .05, .15); place(snare(.45), u0 + .4, 1, -.05, .1)
+    place(b808(m(root), .42, .85), u0, 1, 0, .02); place(b808(m(root), .2, .6), u0 + .5, 1, 0, .02)
+    place(supersaw(ch, .08, .7, cutoff=6000), u0 + .2, 1, 0, .12, bus='sc'); place(supersaw(ch, .08, .6, cutoff=6000), u0 + .6, 1, 0, .12, bus='sc')
+    hats(u0, u0 + .6, 10, .3); hats(u0 + .6, u0 + .8, 30 if c % 2 else 20, .26)
     for k in range(4):
-        t = G0 + (c * 4 + k) * E8
-        if t > 6.95: break
-        place(bass(m(bl[k]), 0.17, 0.75), t, 1, -.1, .05)
-        place(pluck(m(mel[c][k]), 0.25, 0.42, 0.8, 0.99), t, 1, .3, .18)
-        place(glock(m(mel[c][k]) + 12, .16, 0.4), t, 1, .35, .2)
-        if k % 2 == 1: chord(ch, t, 0.09, vel=0.3, pan_spread=.3, rev=.12)
-        if k % 2 == 0:
-            place(kick(0.6), t, 1, 0, .02)
-            place(woodblock(2200 if (c * 2 + k // 2) % 2 == 0 else 1600, .45), t, 1, .35 if k == 0 else -.35, .1)
-        else:
-            place(snare(0.45), t, 1, .05, .1)
-        place(hat(0.35), t + 0.1, 1, .2, .02)
+        t = u0 + k * 0.2
+        place(spluck(m(mel[c][k]), .55, .3), t, 1, .3, .2)
+        place(spluck(m(mel[c][k]) + 12, .22, .2), t + .1, 1, -.3, .2)
+        place(woodblock(2200 if (c * 2 + k // 2) % 2 == 0 else 1600, .4), t, 1, .35 if k % 2 == 0 else -.35, .1) if k % 2 == 0 else None
 for k in range(6):
     place(whoosh(0.16, 800, 3000, 0.22), 4.4 + k * 0.14, 1, (-1) ** k * .4, .05)
     place(pop(0.25, 300, 700), 4.42 + k * 0.14, 1, (-1) ** k * .4, .1)
@@ -473,39 +518,67 @@ SONG = [  # (t, dur, melody midi (high layer), vowel)
 vox, ts = choir([(t0, d, m(n) - 12, v) for t0, d, n, v in SONG], octave_layers=((12, 0.62), (0, 0.85)), voices=6, vib=5.4)
 place(vox, ts, 0.8, 0, 0.32)
 for t0, d, n, v in SONG:
-    place(glock(m(n) + 12, 0.3, 1.0), t0, 1, .3, .3)
-BARS = [(10.667, None, ['G2'], None), (11.0, ['E3', 'G3', 'C4'], ['C2'], 'C'), (12.0, ['F3', 'G3', 'B3'], ['G1'], 'G7'), (13.0, ['F3', 'G3', 'B3'], ['G1'], 'G7'),
-        (14.0, ['E3', 'G3', 'C4'], ['C2'], 'C'), (15.0, ['E3', 'Bb3', 'C4'], ['C2'], 'C7'), (16.0, ['F3', 'A3', 'C4'], ['F1'], 'F'),
-        (17.333, ['E3', 'G3', 'C4'], ['G1'], 'C/G'), (18.333, ['E3', 'G3', 'C4', 'E4'], ['C1', 'C2'], 'C')]
-PADS = {'C': ['C3', 'G3', 'E4'], 'G7': ['G2', 'F3', 'B3', 'D4'], 'C7': ['C3', 'Bb3', 'E4'], 'F': ['F2', 'C3', 'A3', 'F4'], 'C/G': ['G2', 'E3', 'C4']}
-for i, (t0, ch, bs, name) in enumerate(BARS):
-    if ch is None:
-        place(bass(m('G2'), .2, .6), t0, 1, 0, .05); continue
-    nxt = BARS[i + 1][0] if i + 1 < len(BARS) else 19.4
-    final = t0 >= 18.3
-    for b in bs: place(bass(m(b), (nxt - t0) * .9 if final or name == 'F' else B * .9, .8), t0, 1, 0, .05)
-    place(pad(PADS[name], nxt - t0, 0.8, att=0.12, rel=0.5), t0, 1, 0, .3)
-    if final:
-        chord(['C3', 'E3', 'G3', 'C4', 'E4', 'G4', 'C5'], t0, 1.0, vel=0.55, roll=0.012)
-        continue
-    beats = [t0 + B, t0 + 2 * B]
-    if name == 'F': beats = [t0 + B]  # fermata bar: one "pah", then hold
-    if name == 'C/G':
-        beats = [t0 + B]
-        chord(['F3', 'G3', 'B3', 'D4'], t0 + 2 * B, .2, vel=.42, rev=.15)
-        place(bass(m('G2'), B * .9, .7), t0 + 2 * B, 1, 0, .05)
-    for bt in beats: chord(ch, bt, .2, vel=.42, rev=.15)
-    place(kick(0.8), t0, 1, 0, .03)
-    for bt in beats: place(clap(0.6), bt, 1, .05, .15)
-    for k in range(6):
-        tk = t0 + k * B / 2
-        if name == 'F' and tk > t0 + B: break
-        place(hat(0.3 + .15 * (k % 2 == 0)), tk, 1, .25, .03)
-# fermata swell + fill into the last line
-place(crash(0.4, 1.6)[::-1] * .6, 17.0 - 1.6, 1, 0, .15)
-for k in range(6): place(snare(0.3 + k * .08), 16.83 + k * B / 4, 1, 0, .1)
-place(crash(0.6), 17.333, 1, -.3, .3)
-place(kick(1.0), 18.333, 1, 0, .05)
+    place(glock(m(n) + 12, 0.22, 0.8), t0, 1, .3, .3)
+# ---- K-pop production (6/8 feel: bar = 1 s, eighth = 1/6 s) ----
+E6 = 1 / 6
+CH = {'C': (['C4', 'E4', 'G4'], 'C2', ['C5', 'E5', 'G5', 'C6', 'G5', 'E5']), 'G7': (['B3', 'D4', 'F4', 'G4'], 'G1', ['G4', 'B4', 'D5', 'F5', 'D5', 'B4']),
+      'C7': (['Bb3', 'C4', 'E4', 'G4'], 'C2', ['C5', 'E5', 'G5', 'Bb5', 'G5', 'E5']), 'F': (['A3', 'C4', 'F4', 'G4'], 'F1', ['F4', 'A4', 'C5', 'G5', 'C5', 'A4']),
+      'C/G': (['G3', 'C4', 'E4'], 'G1', ['G4', 'C5', 'E5', 'G5', 'E5', 'C5'])}
+def groove_bar(t0, name, energy=1.0, half=False, roll_end=False):
+    ch, root, arp = CH[name]
+    K(t0, 1.0)
+    if not half: K(t0 + 4 * E6, .55)
+    place(b808(m(root), .5, .9), t0, 1, 0, .02)
+    if not half: place(b808(m(root) + 12, .14, .5), t0 + 4 * E6, 1, 0, .02)
+    place(supersaw(ch, 1.0 - .02, .55 * energy, cutoff=7500), t0, 1, 0, .25, bus='sc')
+    sn = t0 + (3 * E6 if not half else 3 * E6)
+    place(clap(.85), sn, 1, .05, .2); place(snare(.55), sn, 1, -.05, .15)
+    rate = 12 if energy > 1 else 6
+    hats(t0, t0 + (5 * E6 if roll_end else 1.0), rate, .3 if not half else .2)
+    if roll_end: hats(t0 + 5 * E6, t0 + 1.0, 36, .28)
+    place(hp(noise(.18), 6000) * np.exp(-tt(.18) * 14) * .09, t0 + 2 * E6, 1, -.3, .05)
+    for k in range(6): place(spluck(m(arp[k]), .4 * energy, .28), t0 + k * E6, 1, (-1) ** k * .35, .25, bus='sc')
+    chord(ch, t0, .3, vel=.28, rev=.15)
+# pickup + verse 1-2
+place(crash(.35, 1.0)[::-1] * .7, 11.0 - 1.0, 1, 0, .1)
+for k, n in enumerate(['G4', 'B4', 'D5', 'G5']): place(spluck(m(n), .3, .25), 10.667 + k * E6 / 2, 1, .2, .25)
+place(b808(m('G1'), .3, .7), 10.667, 1, 0, .02)
+groove_bar(11.0, 'C'); groove_bar(12.0, 'G7', roll_end=True); groove_bar(13.0, 'G7'); groove_bar(14.0, 'C', roll_end=True)
+# bar 5: build toward the drop on "May" (banner lands)
+K(15.0, .9); K(15.333, .8); K(15.667, .9)
+place(b808(m('C2'), .9, .8), 15.0, 1, 0, .02)
+place(supersaw(CH['C7'][0], .9, .5, att=.4, cutoff=3500), 15.0, 1, 0, .25, bus='sc')
+for k in range(12):
+    tk = 15.0 + k * (1 / 12) if k < 6 else 15.5 + (k - 6) * (1 / 14)
+    place(snare(.25 + k * .05), tk, 1, (-1) ** k * .1, .15)
+place(riser(0.9, .7), 15.02, 1, 0, .2)
+for k in range(6): place(spluck(m(CH['C7'][2][k]), .3 + k * .05, .25), 15.0 + k * E6, 1, (-1) ** k * .3, .25, bus='sc')
+# 16.0 DROP: impact, F add9, 808; fermata on "Ma-ay" in half time
+K(16.0, 1.2); place(impact(1.0), 16.0, 1, 0, .25); place(crash(.95, 2.6), 16.0, 1, .25, .35); place(crash(.7, 2.6), 16.01, 1, -.3, .35)
+place(b808(m('F1'), 1.25, 1.0), 16.0, 1, 0, .02)
+place(supersaw(['F3', 'A3', 'C4', 'G4', 'A4', 'C5'], 1.25, .7, cutoff=9000), 16.0, 1, 0, .3, bus='sc')
+chord(['F2', 'C3', 'A3', 'G4', 'C5'], 16.0, 1.2, vel=.45, roll=.01)
+place(clap(.8), 16.5, 1, 0, .25); place(snare(.5), 16.5, 1, 0, .2)
+hats(16.0, 16.8, 12, .16)
+for k in range(9): place(snare(.3 + k * .07), 16.833 + k * (0.5 / 9), 1, (-1) ** k * .12, .12)
+place(riser(0.5, .55, 500, 7000), 16.83, 1, 0, .15)
+place(b808(m('F1'), .3, .7), 17.0, 1, 0, .02)
+for k, n in enumerate(['F5', 'A5', 'C6']): place(spluck(m(n), .35, .25), 17.0 + k * E6 * .66, 1, .2, .25)
+# bar 7: full energy, then the final hit on "you"
+place(crash(.75), 17.333, 1, -.3, .3)
+K(17.333, 1.0); K(17.333 + 2 * E6, .7); K(17.333 + 4 * E6, .8)
+place(b808(m('G1'), .62, .9), 17.333, 1, 0, .02); place(b808(m('G1'), .3, .8), 18.0, 1, 0, .02)
+place(supersaw(CH['C/G'][0], .64, .65, cutoff=8500), 17.333, 1, 0, .25, bus='sc')
+place(supersaw(CH['G7'][0], .32, .7, cutoff=8500), 18.0, 1, 0, .25, bus='sc')
+place(clap(.9), 17.333 + 3 * E6, 1, .05, .2); place(snare(.6), 17.333 + 3 * E6, 1, -.05, .15)
+hats(17.333, 18.25, 12, .3); hats(18.25, 18.333, 48, .3)
+for k, n in enumerate(['G4', 'C5', 'E5', 'G5', 'B4', 'D5']): place(spluck(m(n), .45, .28), 17.333 + k * E6, 1, (-1) ** k * .35, .25, bus='sc')
+chord(['G3', 'C4', 'E4'], 17.333, .3, vel=.3); chord(['G3', 'B3', 'D4', 'F4'], 18.0, .3, vel=.3)
+K(18.333, 1.3); place(impact(1.1), 18.333, 1, 0, .25)
+place(b808(m('C1'), 1.05, 1.0), 18.333, 1, 0, .02)
+place(supersaw(['C3', 'G3', 'C4', 'E4', 'G4', 'D5', 'E5'], 1.0, .8, cutoff=10000, rel=.6), 18.333, 1, 0, .35, bus='sc')
+chord(['C3', 'E3', 'G3', 'C4', 'E4', 'G4', 'C5'], 18.333, 1.0, vel=0.55, roll=0.012)
+for k in range(4): K(18.333 + (k + 1) * .25, .35)
 place(crash(0.9, 2.5), 18.333, 1, .2, .35); place(crash(0.7, 2.5), 18.34, 1, -.3, .35)
 place(timpani(m('C2'), 0.9), 18.333, 1, 0, .3)
 for k, s in enumerate((-.7, .7)):
@@ -545,6 +618,15 @@ def reverb_ir(L=2.0, pre=0.018):
     ir = np.r_[np.zeros((ip, 2)), ir]
     return ir / np.sqrt((ir ** 2).sum(0, keepdims=True)) * 0.8
 
+# sidechain: duck the synth bus after every kick
+duck = np.ones(N)
+for tk, v in KICKS:
+    i0 = int(tk * SR); n = min(N - i0, int(0.45 * SR))
+    if n <= 0: continue
+    tt_ = np.arange(n) / SR
+    d = 1 - min(0.75, 0.6 * v) * np.minimum(1, tt_ / 0.004) * np.exp(-tt_ / 0.11)
+    duck[i0:i0 + n] = np.minimum(duck[i0:i0 + n], d)
+DRY += SC * duck[:, None]; VERB += SCV * duck[:, None]
 ir = reverb_ir()
 wet = np.stack([sg.fftconvolve(VERB[:, c], ir[:, c])[:N] for c in range(2)], 1)
 mix = DRY + wet * 0.9
@@ -564,9 +646,9 @@ mix = np.tanh(mix * 1.1) / np.tanh(1.1)
 out = HERE / "out"; out.mkdir(exist_ok=True)
 raw = out / "raw.wav"
 subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", str(SR), "-ac", "2", "-i", "-", str(raw)], input=mix.astype(np.float32).tobytes(), check=True)
-e = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(raw), "-af", "loudnorm=I=-14:TP=-1:LRA=11:print_format=json", "-f", "null", "-"], capture_output=True, text=True).stderr
+e = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(raw), "-af", "loudnorm=I=-14:TP=-1.6:LRA=11:print_format=json", "-f", "null", "-"], capture_output=True, text=True).stderr
 j = json.loads(e[e.rindex("{"):e.rindex("}") + 1])
-af = (f"loudnorm=I=-14:TP=-1:LRA=11:measured_I={j['input_i']}:measured_TP={j['input_tp']}:measured_LRA={j['input_lra']}"
+af = (f"loudnorm=I=-14:TP=-1.6:LRA=11:measured_I={j['input_i']}:measured_TP={j['input_tp']}:measured_LRA={j['input_lra']}"
       f":measured_thresh={j['input_thresh']}:offset={j['target_offset']}:linear=true")
 subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(raw), "-af", af, "-ar", str(SR), str(out / "audio.wav")], check=True)
 print("audio ->", out / "audio.wav", "| measured input", j['input_i'], "LUFS")
