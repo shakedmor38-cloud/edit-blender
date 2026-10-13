@@ -292,7 +292,7 @@ function cannons(t) {
 }
 function sceneStage(t) {
   const punch = t > 11 && t < 18.333 ? .012 * Math.exp(-(((t - 11) * 3) % 1) * 4) : 0;
-  const cam = camAt(t, [[10, 1.0, 540, 540], [11, 1.02, 540, 540, E.lin], [12.9, 1.06, 540, 545, E.sine], [13.4, 1.42, 540, 640, E.io], [14.9, 1.45, 540, 640, E.lin],
+  const cam = camAt(t, [[10, 1.0, 540, 540], [10.6, 1.0, 540, 540, E.lin], [11.3, 1.16, 540, 610, E.io], [12.9, 1.2, 540, 612, E.sine], [13.4, 1.45, 540, 650, E.io], [14.9, 1.48, 540, 650, E.lin],
     [15.45, 1.0, 540, 520, E.io], [16.3, 1.0, 540, 515, E.lin], [18.2, 1.06, 540, 535, E.sine], [19.35, 1.03, 540, 540, E.sine], [20, 3.2, 540, 790, E.inn]]);
   cam.z *= 1 + punch;
   const [sx, sy] = shake(t, 18.333, 12, .45);
@@ -340,7 +340,7 @@ function sceneEnd(t) {
   }
   // the band crowding behind the cake
   const turn = E.out(prog(t, 20.85, 21.05));
-  const band = [['B', 330, 640, .9], ['D', 540, 610, .92], ['F', 750, 640, .9], ['A', 105, 900, 1.0], ['C', 280, 960, 1.0], ['E', 800, 960, 1.0], ['G', 975, 900, 1.0]];
+  const band = [['B', 318, 590, .9], ['D', 540, 552, .92], ['F', 762, 590, .9], ['A', 105, 900, 1.0], ['C', 270, 960, 1.0], ['E', 810, 960, 1.0], ['G', 975, 900, 1.0]];
   band.forEach(([id, x, y, s], i) => {
     const toward = x < 540 ? 1 : x > 540 ? -1 : 0;
     const p = { x, y: y - 6 * Math.abs(Math.sin(t * 2.2 + i)) * (1 - turn), s, shadow: false, headset: id !== 'A' };
@@ -371,6 +371,6 @@ function sceneEnd(t) {
   // bubble
   if (t > 20.9) {
     const a = pop(t, 20.9, 2.6, .5);
-    bubble('b5', 600, 300, ['Make a wish, May!'], 58, { a, dx: -20, dy: 70, rot: -.02 + .015 * Math.sin(t * 2.4) });
+    bubble('b5', 600, 250, ['Make a wish, May!'], 58, { a, dx: -20, dy: 60, rot: -.02 + .015 * Math.sin(t * 2.4) });
   }
 }

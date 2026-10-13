@@ -210,11 +210,11 @@ function sceneRoom2(t) {
   if (t > 4.62 && t < 5.25) puff(430, 640, prog(t, 4.62, 5.15), 34, 4, '#ffffff');
   // --- A behind the trunk, items flying, finds the mic
   pRect('trunk.lid', 668 - 86, 700, 172, 30, 6, '#8e563c', { amp: 1 });
-  const found = t > 5.28;
-  const dig = Math.sin(t * 30);
+  const found = t > 5.28, fk = E.out(prog(t, 5.2, 5.36));
+  const dig = Math.sin(t * 30) * (1 - fk);
   drawSinger('A', {
-    x: 668, y: 860, s: S1S, rot: found ? 0 : .12, headDy: found ? 0 : 14, eyes: found ? 'huge' : 'shock', mouth: found ? 'open' : 'wavy', mo: .9,
-    armL: found ? .4 : .5 + dig * .7, armR: found ? lerp(.5, 2.4, pop(t, 5.28, 3, .5)) : .5 - dig * .7, propR: found ? propMic : null, sweat: found ? 0 : 1,
+    x: 668, y: 860, s: S1S, rot: .12 * (1 - fk), headDy: 14 * (1 - fk), eyes: found ? 'huge' : 'shock', mouth: found ? 'open' : 'wavy', mo: .9,
+    armL: lerp(.5 + dig * .7, .4, fk), armR: found ? lerp(.5, 2.4, pop(t, 5.28, 3, .5)) : .5 - dig * .7, propR: found ? propMic : null, sweat: 1 - fk,
   });
   if (found) for (let k = 0; k < 5; k++) { const a = k / 5 * TAU + t * 2; sparkle(668 + 104 + Math.cos(a) * 46, 660 - 76 + Math.sin(a) * 40, .7 * Math.sin(Math.PI * prog(t, 5.28, 5.8)), '#fff1b8', t * 3); }
   // trunk
@@ -226,7 +226,7 @@ function sceneRoom2(t) {
   items.forEach(([col, kind], k) => {
     const t0 = 4.4 + k * .14, age = t - t0;
     if (age < 0 || age > 1.1) return;
-    const dir = k % 2 ? 1 : -1, ix = 668 + dir * age * (180 + k * 30), iy = 780 - 420 * age + 520 * age * age;
+    const dir = k % 2 ? 1 : -1, ix = 668 + dir * (70 + age * (300 + k * 30)), iy = 770 - 330 * age + 560 * age * age;
     withT(ix, iy, age * 9 * dir, .9, .9, () => {
       if (kind === 'sock') pPoly(`it${k}`, [[-8, -24], [8, -24], [8, 4], [22, 10], [20, 22], [-8, 18]], col, { smooth: 1 });
       else if (kind === 'shirt') pPoly(`it${k}`, [[-26, -20], [26, -20], [34, -4], [20, 0], [20, 24], [-20, 24], [-20, 0], [-34, -4]], col, { smooth: 1 });

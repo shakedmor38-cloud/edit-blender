@@ -8,6 +8,8 @@ URL = os.environ.get("FILM_URL", "http://localhost:8767/film.html?render=1")
 W, H = 1080, 1080
 T, FPS, SUB, SHUTTER = 22.5, 30, int(os.environ.get("SUB", 5)), 0.5
 NAME = "video"
+FAST = [(2.1, 2.5), (3.1, 3.42), (7.75, 8.42), (19.35, 20.0)]
+def sub_for(t, base): return 12 if any(a <= t <= b for a, b in FAST) else base
 HERE = Path(__file__).parent
 FF = "ffmpeg"
 ARGS = ["--font-render-hinting=none", "--force-color-profile=srgb", "--disable-gpu"]
@@ -51,7 +53,7 @@ async def full(a=0.0, z=None, fps=FPS, sub=SUB, tag=None):
     async with async_playwright() as p:
         b, pg, errs = await open_page(p)
         for k, i in enumerate(range(i0, i1)):
-            save_dataurl(await pg.evaluate(f"window.renderBlur({i / fps}, {sub}, {SHUTTER}, {fps})"), d / f"f_{k:05d}.jpg")
+            save_dataurl(await pg.evaluate(f"window.renderBlur({i / fps}, {sub_for(i / fps, sub)}, {SHUTTER}, {fps})"), d / f"f_{k:05d}.jpg")
             if i % 30 == 0: print(f"[{tag}] frame {i}/{i1}  {time.time() - t0:.0f}s", flush=True)
         await b.close()
     if errs: print("PAGE ERRORS:", errs[:8])
