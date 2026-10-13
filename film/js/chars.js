@@ -118,7 +118,7 @@ const HAIR = {
     back: () => MASS(0, 0, 108, 96),
     front: () => [[-104, -44], [104, -44], [104, 6], [98, 34], [90, 4], ...locks(84, -84, 7, -14, -36, 8, 4), [-90, 4], [-98, 34], [-104, 6]],
     crown: () => [...arcPts(0, -50, 100, 90, 182, 358), [104, -58], [-104, -58]],
-    brim: () => [[-106, -66], [106, -66], [128, -34], [136, -8], [112, 2], [0, 6], [-112, 2], [-136, -8], [-128, -34]],
+    brim: () => [[-106, -72], [106, -72], [128, -42], [136, -16], [112, -8], [0, -6], [-112, -8], [-136, -16], [-128, -42]],
   },
   E: {
     back: () => MASS(0, -16, 122, 114),
@@ -188,7 +188,7 @@ function drawHairFront(id, c, q) {
         strand('D.sheen', -70, -96, -10, -124, 60, -104, 8, '#3c3a42');
         pPoly('D.brim', h.brim(), '#1f1e23', { smooth: 2, amp: 1.2, rim: 3 });
         ctx.save(); ctx.setLineDash([5, 6]); ctx.strokeStyle = 'rgba(200,195,205,.45)'; ctx.lineWidth = 1.8;
-        ctx.beginPath(); ctx.moveTo(-124, -14); ctx.quadraticCurveTo(0, 2, 124, -14); ctx.stroke(); ctx.restore();
+        ctx.beginPath(); ctx.moveTo(-124, -22); ctx.quadraticCurveTo(0, -8, 124, -22); ctx.stroke(); ctx.restore();
       });
       break;
     case 'E':
@@ -220,7 +220,7 @@ function drawHairFront(id, c, q) {
       break;
   }
 }
-const BROWS = { A: [1], B: [-1, 1], C: [], D: [-1, 1], E: [-1, 1], F: [1], G: [-1, 1] };
+const BROWS = { A: [1], B: [-1, 1], C: [], D: [], E: [-1, 1], F: [1], G: [-1, 1] };
 function drawBrows(id, c, q) {
   ctx.strokeStyle = c.brow; ctx.lineWidth = 3.4; ctx.lineCap = 'round';
   const lift = q.eyes === 'huge' || q.eyes === 'shock' ? -6 : 0, worry = q.mouth === 'wavy' ? 1 : 0;
