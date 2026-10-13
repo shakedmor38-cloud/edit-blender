@@ -99,7 +99,8 @@ function drawRoomBack(t, o = {}) {
 const S1X = { A: 600, B: 735, C: 870, E: 1005, F: 1140, G: 1275, D: 1405 };
 const S1Y = 890, S1S = 0.72;
 function rehearsePose(id, t, i) {
-  const ph = (t / SING_BEAT) * Math.PI;
+  // SWIM: song beats land at 0.2128 + k * 0.6383 s in film time
+  const ph = SWIM ? ((t - 0.2128) / 0.6383 + .5) * Math.PI : (t / SING_BEAT) * Math.PI;
   const b = Math.abs(Math.sin(ph));
   return {
     jump: -7 * b, mouth: 'sing', mo: .35 + .65 * b, eyes: i % 3 === 1 ? 'happy' : 'open',

@@ -219,7 +219,7 @@ function crowd(t) {
   rows.forEach(([y, n, hr, col], ri) => {
     for (let i = 0; i < n; i++) {
       const x = -40 + i * (1160 / (n - 1)) + (r() - .5) * 30, by = y + (r() - .5) * 16;
-      const beat = t > 10.6 ? Math.sin((t - 11) * Math.PI * 3 + i * .7 + ri) : 0;
+      const beat = t > 10.6 ? Math.sin((SWIM ? (t - 10) / SB : (t - 11) * 3) * Math.PI + i * .7 + ri) : 0;
       const bob = -Math.abs(beat) * 6;
       // lightstick
       const lsOn = t > 10.35 + (i % 5) * .04;
@@ -242,7 +242,49 @@ function crowd(t) {
     }
   });
 }
+const JUMPT = SWIM ? 17.5 : 18.333;   // last-note jump + confetti
+const BANNER_T = SWIM ? 14.62 : 15.55; // banner starts dropping
+const SB = 0.625;                      // SWIM show beat (94 BPM stretched so 4 bars = 10 s)
+function swimMouth(t) {
+  const i = Math.floor((t - 10) * 60);
+  return i < 0 || i >= SWIM_MOUTH.length ? 0 : SWIM_MOUTH[i];
+}
+// SWIM show: one move per section, each blended from the previous one over 0.16 s (no pose snaps)
+const SWIM_MOVES = [
+  [10.0, (t, i, bt, P) => ({ armL: .2, armR: .2, jump: -6 * P(bt) })],
+  [10.6, (t, i, bt, P) => { const k = E.out(prog(t, 10.6, 10.9)), sw = Math.sin(bt * Math.PI); return { rot: .1 * sw * k, armL: lerp(.2, 2.2 + .35 * sw, k), armR: lerp(.2, 2.2 - .35 * sw, k), jump: -14 * P(bt), eyes: 'happy' }; }],
+  [12.5, (t, i, bt, P) => { const c = P(bt); return { armL: lerp(.55, -.62, c), armR: lerp(.55, -.62, c), jump: -10 * c, rot: .06 * Math.sin(bt * Math.PI) }; }],
+  [13.75, (t, i, bt, P) => { const k = pop(t, 13.75, 3, .5); return { armL: lerp(-.62, 2.45, k), armR: lerp(-.62, 2.45, k), eyes: 'happy', heart: k }; }],
+  [14.4, (t, i, bt, P) => { const k = E.out(prog(t, 14.4, 14.75)); return { armL: lerp(2.45, 2.5, k), armR: lerp(2.45, 2.6, k), lookY: -k, headTilt: (i - 3) * -.02 * k, heart: 1 - k }; }],
+  [15.0, (t, i, bt, P) => { const sw = Math.sin((t - 15) * Math.PI / (2 * SB)); return { armL: 1.55 + .2 * sw, armR: 1.55 - .2 * sw, rot: .14 * sw, eyes: 'happy' }; }],
+  [16.25, (t, i, bt, P) => { const sw = Math.sin(bt * Math.PI); return { armL: -.3, armR: 1.35 + .1 * sw, rot: .08 * sw, jump: -8 * P(bt) }; }],
+  [16.875, (t, i, bt, P) => { const k = E.io(prog(t, 16.875, 17.45)); return { armL: lerp(-.3, .3, k), armR: lerp(1.35, .3, k), sq: 1 - .08 * k }; }],
+  [JUMPT, (t, i, bt, P) => {
+    const d = t - JUMPT, air = clamp(d / .55);
+    const p = { jump: -150 * Math.sin(Math.PI * air), armL: 2.3 + .1 * Math.sin(t * 10), armR: 2.3 + .1 * Math.sin(t * 10 + 1), legL: .35 * Math.sin(Math.PI * air), legR: .35 * Math.sin(Math.PI * air), eyes: 'happy', mouth: 'open', mo: .9 };
+    if (d > .55) { const c = P(bt), sw = Math.sin(bt * Math.PI); Object.assign(p, { armR: 1.45 + .85 * sw, armL: 1.45 - .85 * sw, jump: -12 * c, sq: .95 + .05 * (1 - c), legL: 0, legR: 0 }); }
+    return p;
+  }],
+];
+const POSE_NUM = ['armL', 'armR', 'rot', 'jump', 'sq', 'lookY', 'headTilt', 'legL', 'legR', 'heart'];
+const POSE_DEF = { armL: .18, armR: .18, rot: 0, jump: 0, sq: 1, lookY: 0, headTilt: 0, legL: .04, legR: .04, heart: 0 };
+function choreoSwim(t, i) {
+  const mo = swimMouth(t);
+  const bt = (t - 10) / SB;
+  const P = x => Math.pow(Math.max(0, Math.cos(Math.PI * (x - Math.round(x)))), 6);
+  let k = 0; while (k + 1 < SWIM_MOVES.length && t >= SWIM_MOVES[k + 1][0]) k++;
+  const cur = { ...POSE_DEF, ...SWIM_MOVES[k][1](t, i, bt, P) };
+  const since = t - SWIM_MOVES[k][0];
+  if (k > 0 && since < .16) {
+    const prev = { ...POSE_DEF, ...SWIM_MOVES[k - 1][1](t, i, bt, P) }, w = E.io(since / .16);
+    for (const f of POSE_NUM) cur[f] = lerp(prev[f], cur[f], w);
+  }
+  const p = { mouth: mo > .12 ? 'sing' : 'smile', mo: Math.min(1, mo * 1.15), eyes: 'open', headset: true, ...cur };
+  if (t > JUMPT + .55 && p.mouth === 'open') { p.mouth = mo > .12 ? 'sing' : 'laugh'; p.mo = Math.max(.5, mo); }
+  return p;
+}
 function choreo(t, i) {
+  if (SWIM) return choreoSwim(t, i);
   const p = { mouth: 'sing', mo: singMouth(t), eyes: 'open', headset: true };
   const bt = (t - 11) * 3; // beats since bar 1
   const beatPulse = x => Math.pow(Math.max(0, Math.cos(Math.PI * (x - Math.round(x)))), 6);
@@ -265,7 +307,7 @@ function choreo(t, i) {
   return p;
 }
 function banner(t) {
-  const d = t - 15.55;
+  const d = t - BANNER_T;
   if (d < 0) return;
   const y = lerp(-320, 0, spring(d, 1.6, .45));
   const sw = Math.sin(d * 2.2) * .02 * Math.exp(-d * .4);
@@ -282,20 +324,24 @@ function banner(t) {
 function cannons(t) {
   for (const side of [-1, 1]) {
     const x = 540 + side * 455, y = STAGE.front - 24;
-    const kick = t > 18.333 ? -14 * Math.exp(-(t - 18.333) * 9) : 0;
+    const kick = t > JUMPT ? -14 * Math.exp(-(t - JUMPT) * 9) : 0;
     withT(x, y, side * -.55, 1, 1, () => {
       pRect(`can${side}`, -22, -96 + kick, 44, 110, 10, side < 0 ? PAL.denim : PAL.purple);
       pRect(`canb${side}`, -24, -100 + kick, 48, 14, 5, PAL.mustard, { rim: 2 });
     });
-    if (t > 18.333) puff(x - side * 50, y - 110, prog(t, 18.333, 18.9), 50, 70 + side);
+    if (t > JUMPT) puff(x - side * 50, y - 110, prog(t, JUMPT, JUMPT + .57), 50, 70 + side);
   }
 }
 function sceneStage(t) {
-  const punch = t > 11 && t < 18.333 ? .012 * Math.exp(-(((t - 11) * 3) % 1) * 4) : 0;
-  const cam = camAt(t, [[10, 1.0, 540, 540], [10.6, 1.0, 540, 540, E.lin], [11.3, 1.16, 540, 610, E.io], [12.9, 1.2, 540, 612, E.sine], [13.4, 1.45, 540, 650, E.io], [14.9, 1.48, 540, 650, E.lin],
+  const bump = x => x < .05 ? E.sine(x / .05) : Math.exp(-(x - .05) * 6);   // x = seconds since the beat
+  const punch = SWIM ? (t > 10.6 && t < JUMPT ? .012 * bump(((t - 10) / SB) % 1 * SB) : 0)
+    : (t > 11 && t < 18.333 ? .012 * bump(((t - 11) * 3) % 1 / 3) : 0);
+  const cam = SWIM ? camAt(t, [[10, 1.0, 540, 540], [10.6, 1.0, 540, 540, E.lin], [11.3, 1.16, 540, 610, E.io], [12.4, 1.2, 540, 612, E.sine], [12.9, 1.45, 540, 650, E.io], [14.3, 1.48, 540, 650, E.lin],
+    [14.85, 1.0, 540, 520, E.io], [15.7, 1.0, 540, 515, E.lin], [17.4, 1.06, 540, 535, E.sine], [19.35, 1.03, 540, 540, E.sine], [20, 3.2, 540, 790, E.inn]])
+  : camAt(t, [[10, 1.0, 540, 540], [10.6, 1.0, 540, 540, E.lin], [11.3, 1.16, 540, 610, E.io], [12.9, 1.2, 540, 612, E.sine], [13.4, 1.45, 540, 650, E.io], [14.9, 1.48, 540, 650, E.lin],
     [15.45, 1.0, 540, 520, E.io], [16.3, 1.0, 540, 515, E.lin], [18.2, 1.06, 540, 535, E.sine], [19.35, 1.03, 540, 540, E.sine], [20, 3.2, 540, 790, E.inn]]);
   cam.z *= 1 + punch;
-  const [sx, sy] = shake(t, 18.333, 12, .45);
+  const [sx, sy] = shake(t, JUMPT, 12, .45);
   applyCam(cam, sx, sy);
   drawStageBack(t);
   banner(t);
@@ -311,8 +357,8 @@ function sceneStage(t) {
   pRect('ctab4l', 540 - 8, STAGE.front - 44, 16, 44, 4, '#e2d4c0', { rim: 2 });
   drawCake('cake4', 540, STAGE.front - 58, .42, { t, lit: [0, 0], plate: true });
   cannons(t);
-  confetti(t, 18.333, 120, STAGE.front - 120, 1, 150, 7);
-  confetti(t, 18.333, 960, STAGE.front - 120, -1, 150, 8);
+  confetti(t, JUMPT, 120, STAGE.front - 120, 1, 150, 7);
+  confetti(t, JUMPT, 960, STAGE.front - 120, -1, 150, 8);
   // notes from the singers
   for (let k = 0; k < 10; k++) {
     const born = 11 + k * .72, age = t - born;

@@ -1,6 +1,8 @@
 // core.js : timing helpers, seeded random, paper textures and torn-paper shapes.
 'use strict';
 const W = 1080, H = 1080, TT = 22.5;
+// ?swim=1 : soundtrack variant cut to BTS 'SWIM' (94 BPM); the show scene follows the song's beat
+const SWIM = new URLSearchParams(location.search).has('swim');
 const cv = document.getElementById('stage');
 const ctx = cv.getContext('2d');
 

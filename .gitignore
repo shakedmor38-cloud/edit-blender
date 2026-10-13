@@ -7,3 +7,6 @@ film/out/*.wav
 film/out/video.mp4
 film/out/raw.wav
 film/frames_all/
+film/assets/song/
+film/out/*swim*
+film/out/audio_swim*

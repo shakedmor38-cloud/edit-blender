@@ -92,5 +92,5 @@ if __name__ == "__main__":
     elif cmd == "sheet": asyncio.run(probe([float(x) for x in rest[2:]], rest[0], cols=int(rest[1])))
     elif cmd == "full": asyncio.run(full(float(rest[0]), float(rest[1]), tag=rest[2] if len(rest) > 2 else None))
     elif cmd == "draft": asyncio.run(full(0, T, fps=15, sub=1, tag="draft"))
-    elif cmd == "encode": encode(rest[1:], fps=int(rest[0]))
+    elif cmd == "encode": encode(rest[1:], fps=int(rest[0]), out=os.environ.get("OUT", "out/video.mp4"))
     elif cmd == "pops": pops(rest[0], int(rest[1]) if len(rest) > 1 else FPS)
