@@ -1,0 +1,6 @@
+__pycache__/
+film/probe/
+film/frames_*/
+film/frames_list.txt
+film/storyboard/panels/
+film/out/*.wav

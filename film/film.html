@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Make a Wish, May</title>
+<style>
+@font-face { font-family: 'Fredoka'; src: url(assets/fonts/Fredoka.woff2) format('woff2'); font-weight: 300 700; }
+@font-face { font-family: 'Patrick Hand'; src: url(assets/fonts/PatrickHand.woff2) format('woff2'); }
+@font-face { font-family: 'Gaegu'; src: url(assets/fonts/Gaegu.woff2) format('woff2'); font-weight: 700; }
+html, body { margin: 0; background: #2a2220; }
+body { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 0; }
+#stage { display: block; width: 1080px; height: 1080px; }
+#ui { color: #f3e6dd; font: 13px ui-monospace, Menlo, monospace; padding: 6px 0 12px; }
+body.render #ui { display: none; }
+</style>
+</head>
+<body>
+<canvas id="stage" width="1080" height="1080"></canvas>
+<div id="ui">space play/pause · ←/→ frame · R replay · <span id="tc">0.00</span></div>
+<script src="js/core.js"></script>
+<script src="js/chars.js"></script>
+<script src="js/props.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/scenes2.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
