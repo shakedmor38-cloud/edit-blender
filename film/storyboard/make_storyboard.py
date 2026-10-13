@@ -28,7 +28,7 @@ PANELS = [
     (16.40, "4 · The show", "Banner drops on “dear May”."),
     (18.70, "4 · The show", "Last note: jump + confetti cannons."),
     (20.62, "5 · The ending", "Close-up: the candles magically relight."),
-    (21.80, "5 · The ending", "The band to camera: “Make a wish, May!”"),
+    (21.80, "5 · The ending", "The band to camera: “Happy Birthday!” Cake reads “still with you”."),
 ]
 
 async def main():
